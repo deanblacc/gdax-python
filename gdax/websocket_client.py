@@ -83,7 +83,7 @@ class WebsocketClient(object):
             try:
                 # Set a 30 second ping to keep connection alive
                 if time.time() - start_t >= 25:
-                    self.ws.ping("keepalive")
+                    self.ws = create_connection(self.url)
                     start_t = time.time()
                 
                 data = self.ws.recv()
