@@ -73,34 +73,35 @@ class WebsocketClient(object):
             sub_params['timestamp'] = timestamp
 
         self.ws = create_connection(self.url)
+        
+        self.sub_params = sub_params
+        
+        self.ws.send(json.dumps(self.sub_params))
 
-        self.ws.send(json.dumps(sub_params))
-
+    def _reconnect(self):
+        self.ws = create_connection(self.url)
+        self.ws.send(json.dumps(self.sub_params))
+    
     def _listen(self):
         start_t = time.time()
         
         while not self.stop:
             try:
-                # Set a 30 second ping to keep connection alive
-                if time.time() - start_t >= 25:
-                    self.ws = create_connection(self.url)
-                    start_t = time.time()
-                
                 data = self.ws.recv()
                 msg = json.loads(data)
+            except WebSocketConnectionClosedException as e:
+                self._reconnect()
             except ValueError as e:
-                self.on_error(e)
+                self.on_error(e, data=data)
             except Exception as e:
-                self.on_error(e)
+                self.on_error(e, data=data)
             else:
                 self.on_message(msg)
 
     def _disconnect(self):
-        try:
-            if self.ws:
-                self.ws.close()
-        except WebSocketConnectionClosedException as e:
-            pass
+
+        if self.ws:
+            self.ws.close()
 
         self.on_close()
 
